@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import LoginBackground from '../../Assets/Images/LoginBackground';
+import LoginBackground from '../../assets/Images/LoginBackground';
 import { usePost } from '../../Hooks/usePost';
 import { useAuth } from '../../Context/Auth';
 import { useNavigate } from 'react-router-dom';
