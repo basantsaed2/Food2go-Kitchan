@@ -16,11 +16,13 @@ const HomePage = () => {
         url: `${apiUrl}/kitchen/orders/notification`,
         required: true,
     });
-    const { postData, loadingPost } = usePost({ url: `${apiUrl}/api/logout` });
+    const { postData: logoutPost, loadingPost } = usePost({ url: `${apiUrl}/api/logout` });
+    const { changeState: markAsReadPost, loadingChange: loadingMarkAsRead } = useChangeState();
     const auth = useAuth();
     const navigate = useNavigate();
     const { changeState, loadingChange } = useChangeState();
     const [orders, setOrders] = useState([]);
+    const [notifications, setNotifications] = useState([]); // New state for notifications
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [filterStatus, setFilterStatus] = useState("preparing");
     const [filterType, setFilterType] = useState("all");
@@ -31,20 +33,17 @@ const HomePage = () => {
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const [prevOrderCount, setPrevOrderCount] = useState(0);
 
-    // Move useSwipeable hook to top level
     const handlers = useSwipeable({
         onSwipedLeft: () => handleSwipe("left"),
         onSwipedRight: () => handleSwipe("right"),
         trackMouse: true,
     });
 
-    // Chef Data
     const chefData = {
         name: auth?.kitchen?.kitchen.name || "Unknown Chef",
         branch: auth?.kitchen?.kitchen?.branch?.name || "Main Kitchen",
     };
 
-    // Transform API data
     const transformOrders = (data) => {
         if (data && data.kitchen_order) {
             return data.kitchen_order.map(order => ({
@@ -57,6 +56,7 @@ const HomePage = () => {
                     ? new Date(order.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
                     : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
                 status: order.status || "preparing",
+                read: order.read || false,
                 icon: order.type === "take_away" ? "🚚" : order.type === "dine_in" ? "🍽️" : "📦",
                 table: order.type === "dine_in" ? order.table?.table_number || "N/A" : null,
                 items: order.order.map(item => ({
@@ -83,7 +83,6 @@ const HomePage = () => {
         return [];
     };
 
-    // Periodic fetching every 30 seconds
     useEffect(() => {
         refetchOrders();
         refetchNotifications();
@@ -94,20 +93,16 @@ const HomePage = () => {
         return () => clearInterval(interval);
     }, [refetchOrders, refetchNotifications]);
 
-    // Update orders and set default selected order
     useEffect(() => {
         const transformedOrders = transformOrders(ordersData);
         const transformedNotifications = transformOrders(notificationsData);
-        const mergedOrders = [
-            ...transformedOrders,
-            ...transformedNotifications.filter(n => !transformedOrders.some(o => o.id === n.id))
-        ];
-        setOrders(mergedOrders);
-        if (mergedOrders.length > 0 && !selectedOrder) {
-            setSelectedOrder(mergedOrders[0]);
+        setOrders(transformedOrders); // Only use ordersData for orders
+        setNotifications(transformedNotifications); // Store notifications separately
+        if (transformedOrders.length > 0 && !selectedOrder) {
+            setSelectedOrder(transformedOrders[0]);
             setCurrentSlideIndex(0);
         }
-        setPrevOrderCount(mergedOrders.length);
+        setPrevOrderCount(transformedOrders.length);
     }, [ordersData, notificationsData, selectedOrder]);
 
     const handleOrderClick = (orderId) => {
@@ -119,7 +114,6 @@ const HomePage = () => {
     const handleStatusChange = async (orderId, newStatus) => {
         const url = `${apiUrl}/kitchen/orders/done_status/${orderId}`;
         const success = await changeState(url, "Order Status", { status: newStatus });
-
         if (success) {
             const updatedOrders = orders.map(order =>
                 order.id === orderId ? { ...order, status: newStatus } : order
@@ -132,14 +126,25 @@ const HomePage = () => {
         return success;
     };
 
-    // const handleSkip = () => {
-    //     if (currentSlideIndex < orders.length - 1) {
-    //         setCurrentSlideIndex(currentSlideIndex + 1);
-    //         setSelectedOrder(orders[currentSlideIndex + 1]);
-    //     } else {
-    //         setShowOrderDialog(false);
-    //     }
-    // };
+    const handleMarkAsRead = async (orderId) => {
+        const success = await markAsReadPost(
+            `${apiUrl}/kitchen/orders/read_status/${orderId}`,
+            `Order marked as read!`
+        );
+        if (success) {
+            // Update orders state to mark the order as read
+            const updatedOrders = orders.map(order =>
+                order.id === orderId ? { ...order, read: true } : order
+            );
+            // Remove the order from notifications state
+            const updatedNotifications = notifications.filter(order => order.id !== orderId);
+            setOrders(updatedOrders);
+            setNotifications(updatedNotifications);
+            setSelectedOrder(prev => prev && prev.id === orderId ? { ...prev, read: true } : prev);
+            refetchNotifications(); // Refetch to ensure backend sync
+            refetchOrders(); // Refetch orders to ensure consistency
+        }
+    };
 
     const handleShow = (orderId) => {
         const order = orders.find(o => o.id === orderId);
@@ -171,7 +176,7 @@ const HomePage = () => {
 
     const handleLogout = async () => {
         try {
-            await postData("Logout Successful!");
+            await logoutPost("Logout Successful!");
             auth.logout();
             navigate("/login", { replace: true });
             setShowChefDialog(false);
@@ -218,12 +223,12 @@ const HomePage = () => {
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setShowNotificationDialog(true)}
-                            className={`p-3 rounded-full hover:bg-gray-100 transition-colors relative ${orders.length > prevOrderCount ? 'animate-pulse' : ''}`}
+                            className={`p-3 rounded-full hover:bg-gray-100 transition-colors relative ${notifications.length > 0 ? 'animate-pulse' : ''}`}
                         >
                             <span className="text-xl text-gray-600">🔔</span>
-                            {orders.length > 0 && (
+                            {notifications.length > 0 && (
                                 <span className="absolute top-0 right-0 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                                    {orders.length}
+                                    {notifications.length}
                                 </span>
                             )}
                         </button>
@@ -252,7 +257,8 @@ const HomePage = () => {
                                     className={`
                                         bg-white rounded-2xl p-5 shadow-lg flex flex-col justify-between cursor-pointer
                                         hover:shadow-xl hover:bg-gray-50 transition-all duration-300
-                                        ${selectedOrder?.id === order.id ? 'ring-2 ring-red-600 ring-offset-2 z-10' : ''}
+                                        ${selectedOrder?.id === order.id ? 'ring-4 ring-red-600 ring-offset-2 z-10 border-none' : ''}
+                                        ${!order.read ? 'border-l-2 border-red-600' : ''}
                                     `}
                                 >
                                     <div>
@@ -307,7 +313,6 @@ const HomePage = () => {
                     {/* Order Summary */}
                     <div className="flex-none w-full lg:w-[400px] min-w-[300px] bg-white border border-gray-200 rounded-2xl p-6 shadow-lg overflow-y-auto max-h-[calc(100vh-200px)] scrollPage">
                         <h3 className="mb-4 text-2xl text-red-600 font-bold border-b border-gray-200 pb-3">Order Summary</h3>
-
                         {selectedOrder ? (
                             <>
                                 <p className="mb-4 text-sm text-gray-800">
@@ -316,8 +321,8 @@ const HomePage = () => {
                                     {selectedOrder.type === "Dine In" && selectedOrder.table && (
                                         <> | Table <span className="font-bold">{selectedOrder.table}</span></>
                                     )}
+                                    {/* | Status: <span className="font-bold">{selectedOrder.read ? "Read" : "Unread"}</span> */}
                                 </p>
-
                                 <div className="border-b border-dashed border-gray-200 pb-4 mb-4">
                                     {selectedOrder.items.map((item, index) => (
                                         <div key={index} className="mb-4">
@@ -338,13 +343,11 @@ const HomePage = () => {
                                         </div>
                                     ))}
                                 </div>
-
                                 {selectedOrder.note && (
                                     <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
                                         <p className="m-0 font-medium">Note: <span className="text-blue-700">{selectedOrder.note}</span></p>
                                     </div>
                                 )}
-
                                 <div className="mb-4 text-xs text-gray-500">
                                     <div className="flex justify-between mb-2">
                                         <span>Items Price</span>
@@ -358,17 +361,11 @@ const HomePage = () => {
                                         <span>Discount</span>
                                         <span className="text-red-500">-EGP {selectedOrder.discount.toFixed(2)}</span>
                                     </div>
-                                    {/* <div className="flex justify-between mb-2">
-                                        <span>VAT/TAX</span>
-                                        <span>EGP {selectedOrder.vatTax.toFixed(2)}</span>
-                                    </div> */}
                                 </div>
-
                                 <div className="flex justify-between items-center border-t border-gray-200 pt-4">
                                     <h3 className="m-0 text-lg font-bold text-gray-800">Total</h3>
                                     <h3 className="m-0 text-2xl font-extrabold text-red-600">EGP {selectedOrder.total.toFixed(2)}</h3>
                                 </div>
-
                                 {selectedOrder.status === "preparing" && (
                                     <button
                                         onClick={() => handleStatusChange(selectedOrder.id, "done")}
@@ -420,6 +417,7 @@ const HomePage = () => {
                                     {orders[currentSlideIndex].type === "Dine In" && orders[currentSlideIndex].table && (
                                         <> | Table <span className="font-bold">{orders[currentSlideIndex].table}</span></>
                                     )}
+                                    | Status: <span className="font-bold">{orders[currentSlideIndex].read ? "Read" : "Unread"}</span>
                                 </p>
                                 <div className="border-b border-dashed border-gray-200 pb-4 mb-4">
                                     {orders[currentSlideIndex].items.map((item, index) => (
@@ -454,12 +452,6 @@ const HomePage = () => {
                                     >
                                         ⬅️
                                     </button>
-                                    {/* <button
-                                        onClick={handleSkip}
-                                        className="flex-1 py-2 px-4 bg-gray-200 text-gray-800 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-all duration-300"
-                                    >
-                                        Skip
-                                    </button> */}
                                     <button
                                         onClick={() => handleStatusChange(orders[currentSlideIndex].id, "done")}
                                         disabled={loadingChange || orders[currentSlideIndex].status === "done"}
@@ -472,6 +464,18 @@ const HomePage = () => {
                                     >
                                         {loadingChange ? "Processing..." : orders[currentSlideIndex].status === "done" ? "Completed" : "Mark as Done"}
                                     </button>
+                                    {!orders[currentSlideIndex].read && (
+                                        <button
+                                            onClick={() => handleMarkAsRead(orders[currentSlideIndex].id)}
+                                            disabled={loadingMarkAsRead}
+                                            className={`
+                                                flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all duration-300
+                                                ${loadingMarkAsRead ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}
+                                            `}
+                                        >
+                                            {loadingMarkAsRead ? "Processing..." : "Mark as Read"}
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => setCurrentSlideIndex(currentSlideIndex < orders.length - 1 ? currentSlideIndex + 1 : orders.length - 1)}
                                         disabled={currentSlideIndex === orders.length - 1}
@@ -497,31 +501,45 @@ const HomePage = () => {
                             &times;
                         </button>
                         <h3 className="mb-4 text-2xl text-red-600 font-bold">Notifications</h3>
-                        {orders.length === 0 ? (
+                        {notifications.length === 0 ? (
                             <p className="text-gray-500 text-lg">No new orders.</p>
                         ) : (
-                            orders.map((order) => (
+                            notifications.map((order) => (
                                 <div
                                     key={order.id}
                                     className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-all duration-200"
                                 >
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex justify-between items-center gap-2">
                                         <div>
                                             <p className="m-0 font-semibold text-sm text-gray-800">Order #{order.id}</p>
-                                            <p className="m-0 text-xs text-gray-500">{order.type} | {order.time}</p>
+                                            <p className="m-0 text-xs text-gray-500">{order.type} | {order.time} | {order.read ? "Read" : "Unread"}</p>
                                         </div>
-                                        <button
-                                            onClick={() => handleShow(order.id)}
-                                            disabled={order.status === "done"}
-                                            className={`
-                                                py-1.5 px-4 rounded-lg text-xs font-semibold
-                                                ${order.status === "done"
-                                                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                                                    : 'bg-red-600 text-white hover:bg-red-700'}
-                                            `}
-                                        >
-                                            {order.status === "done" ? "Completed" : "Show"}
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleShow(order.id)}
+                                                disabled={order.status === "done"}
+                                                className={`
+                                                    py-1.5 px-4 rounded-lg text-xs font-semibold
+                                                    ${order.status === "done"
+                                                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                                                        : 'bg-red-600 text-white hover:bg-red-700'}
+                                                `}
+                                            >
+                                                {order.status === "done" ? "Completed" : "Show"}
+                                            </button>
+                                            {!order.read && (
+                                                <button
+                                                    onClick={() => handleMarkAsRead(order.id)}
+                                                    disabled={loadingMarkAsRead}
+                                                    className={`
+                                                        py-1.5 px-4 rounded-lg text-xs font-semibold
+                                                        ${loadingMarkAsRead ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}
+                                                    `}
+                                                >
+                                                    {loadingMarkAsRead ? "Processing..." : "Mark as Read"}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))

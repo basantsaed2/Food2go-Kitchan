@@ -50,7 +50,7 @@ const LoginPage = () => {
 
        return (
               <div className="w-full min-h-screen flex items-center justify-center">
-                     <div className="w-full flex flex-col md:flex-row shadow-xl rounded-lg overflow-hidden">
+                     <div className="w-full flex flex-col md:flex-row rounded-lg overflow-hidden">
                             {/* Left: Form Section */}
                             <div className="w-full md:w-1/2 bg-white p-8 flex flex-col justify-center">
                                    <h1 className="text-3xl md:text-4xl font-bold text-red-800 mb-2">Welcome Back</h1>
