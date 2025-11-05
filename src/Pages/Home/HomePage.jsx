@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useSwipeable } from "react-swipeable";
 import { useGet } from '../../Hooks/useGet';
@@ -10,16 +11,18 @@ const HomePage = () => {
     const apiUrl = import.meta.env.VITE_API_BASE_URL;
     const projectNameEn = import.meta.env.VITE_PROJECT_EN_NAME || "Food2Go";
     const projectNameAr = import.meta.env.VITE_PROJECT_AR_NAME || "فود تو جو";
-    
+
     // Language state
     const [selectedLanguage, setSelectedLanguage] = useState("en");
     const projectName = selectedLanguage === "ar" ? projectNameAr : projectNameEn;
-    
+
     // Translations
     const translations = {
         en: {
             searchPlaceholder: "Search by ID, item, or table...",
             noOrders: "No orders found for the selected filters.",
+            newOrders: "New Orders",
+            allOrders: "All Orders",
             orderId: "Order ID",
             items: "Items",
             addons: "Addons",
@@ -49,11 +52,14 @@ const HomePage = () => {
             dineIn: "Dine In",
             delivery: "Delivery",
             loadingOrders: "Loading orders...",
-            loading: "Loading..."
+            loading: "Loading...",
+            orders: "Orders"
         },
         ar: {
             searchPlaceholder: "ابحث بالرقم، الصنف، أو الطاولة...",
             noOrders: "لا توجد طلبات تطابق الفلاتر المحددة.",
+            newOrders: "الطلبات الجديدة",
+            allOrders: "جميع الطلبات",
             orderId: "رقم الطلب",
             items: "الأصناف",
             addons: "الإضافات",
@@ -79,11 +85,12 @@ const HomePage = () => {
             logout: "تسجيل الخروج",
             branch: "الفرع",
             all: "الكل",
-            takeAway: "طلب خارجي",
-            dineIn: "تناول في المطعم",
-            delivery: "دليفري",
+            takeAway: "تيك أواي",
+            dineIn: "صالة",
+            delivery: "توصيل",
             loadingOrders: "جاري تحميل الطلبات...",
-            loading: "جاري التحميل..."
+            loading: "جاري التحميل...",
+            orders: "الطلبات"
         }
     };
 
@@ -94,12 +101,12 @@ const HomePage = () => {
         url: `${apiUrl}/kitchen/orders?locale=${selectedLanguage}`,
         required: true,
     });
-    
+
     const { refetch: refetchNotifications, data: notificationsData, loading: notificationsLoading } = useGet({
         url: `${apiUrl}/kitchen/orders/notification?locale=${selectedLanguage}`,
         required: true,
     });
-    
+
     const { postData: logoutPost, loadingPost } = usePost({ url: `${apiUrl}/api/logout` });
     const { changeState: markAsReadPost, loadingChange: loadingMarkAsRead } = useChangeState();
     const auth = useAuth();
@@ -135,27 +142,26 @@ const HomePage = () => {
                 id: order.id.toString(),
                 type: order.type === "take_away" ? t.takeAway : order.type === "dine_in" ? t.dineIn : t.delivery,
                 date: order.created_at
-                    ? new Date(order.created_at).toLocaleDateString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', { 
-                        day: '2-digit', 
-                        month: 'short', 
-                        year: 'numeric' 
+                    ? new Date(order.created_at).toLocaleDateString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
                     })
-                    : new Date().toLocaleDateString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', { 
-                        day: '2-digit', 
-                        month: 'short', 
-                        year: 'numeric' 
+                    : new Date().toLocaleDateString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
                     }),
                 time: order.created_at
-                    ? new Date(order.created_at).toLocaleTimeString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                    ? new Date(order.created_at).toLocaleTimeString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
                     })
-                    : new Date().toLocaleTimeString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                    : new Date().toLocaleTimeString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
                     }),
                 status: order.status || "preparing",
-                read: order.read || false,
                 icon: order.type === "take_away" ? "🚚" : order.type === "dine_in" ? "🍽️" : "📦",
                 table: order.type === "dine_in" ? order.table?.table_number || "N/A" : null,
                 items: order.order.map(item => ({
@@ -232,13 +238,9 @@ const HomePage = () => {
             `Order marked as read!`
         );
         if (success) {
-            const updatedOrders = orders.map(order =>
-                order.id === orderId ? { ...order, read: true } : order
-            );
+            // Remove from notifications - this will make it disappear from right sidebar
             const updatedNotifications = notifications.filter(order => order.id !== orderId);
-            setOrders(updatedOrders);
             setNotifications(updatedNotifications);
-            setSelectedOrder(prev => prev && prev.id === orderId ? { ...prev, read: true } : prev);
             refetchNotifications();
             refetchOrders();
         }
@@ -271,6 +273,15 @@ const HomePage = () => {
             (order.table && order.type === "dine_in" && order.table.toLowerCase().includes(searchQuery.toLowerCase()));
         return matchesStatus && matchesType && matchesSearch;
     });
+
+    // Get notification order IDs for checking if an order is unread
+    const notificationOrderIds = notifications.map(order => order.id);
+    
+    // Check if an order is unread (exists in notifications)
+    const isOrderUnread = (orderId) => notificationOrderIds.includes(orderId);
+
+    // Filter orders for left side - exclude orders that are in notifications (unread)
+    const readOrders = filteredOrders.filter(order => !isOrderUnread(order.id));
 
     const handleLogout = async () => {
         try {
@@ -320,14 +331,307 @@ const HomePage = () => {
         </div>
     );
 
+    // Order Card Component for Left Side (Read Orders)
+    const OrderCard = ({ order }) => (
+        <div
+            key={order.id}
+            onClick={() => handleOrderClick(order.id)}
+            className={`
+                bg-white rounded-2xl p-5 shadow-lg flex flex-col justify-between cursor-pointer
+                hover:shadow-xl hover:bg-gray-50 transition-all duration-300
+                border-l-4 border-gray-300
+            `}
+        >
+            <div>
+                <h3 className="m-0 text-xl font-bold text-gray-800 mb-3">
+                    {t.orderId} <span className="text-red-600">#{order.id}</span>
+                </h3>
+                <div className="flex items-center gap-3 text-gray-600 text-sm mb-3">
+                    <span className="text-xl">{order.icon}</span>
+                    <span className="font-medium">{order.type}</span>
+                    {order.type === t.dineIn && order.table && (
+                        <span className="font-medium">| {t.table} {order.table}</span>
+                    )}
+                </div>
+
+                {/* Items, addons, excludes, extras */}
+                <div className="text-sm font-semibold text-gray-900 space-y-2">
+                    {/* Main Items */}
+                    <div>
+                        <span className="font-medium">{t.items}:</span>
+                        <div className="ml-2 mt-1">
+                            {order.items.map((item, index) => (
+                                <div key={index} className="flex justify-between">
+                                    <span>• {item.quantity}x {item.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Addons */}
+                    {order.items.some(item => item.addons.length > 0) && (
+                        <div>
+                            <span className="font-medium">{t.addons}:</span>
+                            <div className="ml-2 mt-1">
+                                {order.items
+                                    .filter(item => item.addons.length > 0)
+                                    .map((item, itemIndex) => (
+                                        <div key={itemIndex}>
+                                            {item.addons.map((addon, addonIndex) => (
+                                                <div key={addonIndex}>
+                                                    • {addon.count}x {addon.name} ({item.name})
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Excludes */}
+                    {order.items.some(item => item.excludes.length > 0) && (
+                        <div>
+                            <span className="font-medium">{t.excludes}:</span>
+                            <div className="ml-2 mt-1">
+                                {order.items
+                                    .filter(item => item.excludes.length > 0)
+                                    .map((item, itemIndex) => (
+                                        <div key={itemIndex}>
+                                            • {item.excludes.join(', ')} ({item.name})
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Extras */}
+                    {order.items.some(item => item.extras.length > 0) && (
+                        <div>
+                            <span className="font-medium">{t.extras}:</span>
+                            <div className="ml-2 mt-1">
+                                {order.items
+                                    .filter(item => item.extras.length > 0)
+                                    .map((item, itemIndex) => (
+                                        <div key={itemIndex}>
+                                            • {item.extras.join(', ')} ({item.name})
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {order.note && (
+                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-800">
+                        <p className="m-0 font-medium">{t.note}: <span className="text-blue-700">{order.note}</span></p>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex justify-between items-end mt-4 pt-3 border-t border-dashed border-gray-200">
+                <div>
+                    <p className="m-0 text-xs text-gray-500">{t.orderTime}</p>
+                    <p className="m-0 font-bold text-sm text-gray-800">{order.time}</p>
+                    <p className="m-0 text-xs text-gray-400">{order.date}</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                    <button
+                        className={`
+                            border-none py-1.5 px-3 rounded-full text-xs font-bold shadow-sm transition-colors duration-200 mb-2
+                            ${order.status === "preparing" ? 'bg-blue-100 text-blue-600' : ''}
+                            ${order.status === "done" ? 'bg-green-100 text-green-600' : ''}
+                        `}
+                    >
+                        {order.status === "preparing" ? t.preparing : t.done}
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex gap-2 mt-2">
+                <button
+                    onClick={e => { e.stopPropagation(); handleShowDetails(order.id); }}
+                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center flex-1"
+                    title={t.viewDetails}
+                >
+                    <span className="text-sm font-semibold">{t.viewDetails}</span>
+                </button>
+                <button
+                    onClick={e => { e.stopPropagation(); handleStatusChange(order.id, "done"); }}
+                    disabled={loadingChange || order.status === "done"}
+                    className={`
+                        p-2 rounded-lg transition-colors duration-200 flex items-center justify-center flex-1
+                        ${loadingChange || order.status === "done"
+                            ? 'bg-gray-400 cursor-not-allowed text-white'
+                            : 'bg-green-600 text-white hover:bg-green-700'}
+                    `}
+                    title={t.markDone}
+                >
+                    <span className="text-sm font-semibold">{t.markDone}</span>
+                </button>
+            </div>
+        </div>
+    );
+
+    // Order Card Component for Right Side (Unread Orders from Notifications)
+    const NotificationOrderCard = ({ order }) => (
+        <div
+            key={order.id}
+            onClick={() => handleOrderClick(order.id)}
+            className={`
+                bg-white rounded-2xl p-5 shadow-lg flex flex-col justify-between cursor-pointer
+                hover:shadow-xl hover:bg-gray-50 transition-all duration-300
+                border-l-4 border-red-600
+            `}
+        >
+            <div>
+                <h3 className="m-0 text-xl font-bold text-gray-800 mb-3">
+                    {t.orderId} <span className="text-red-600">#{order.id}</span>
+                </h3>
+                <div className="flex items-center gap-3 text-gray-600 text-sm mb-3">
+                    <span className="text-xl">{order.icon}</span>
+                    <span className="font-medium">{order.type}</span>
+                    {order.type === t.dineIn && order.table && (
+                        <span className="font-medium">| {t.table} {order.table}</span>
+                    )}
+                </div>
+
+                {/* Items, addons, excludes, extras */}
+                <div className="text-sm font-semibold text-gray-900 space-y-2">
+                    {/* Main Items */}
+                    <div>
+                        <span className="font-medium">{t.items}:</span>
+                        <div className="ml-2 mt-1">
+                            {order.items.map((item, index) => (
+                                <div key={index} className="flex justify-between">
+                                    <span>• {item.quantity}x {item.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Addons */}
+                    {order.items.some(item => item.addons.length > 0) && (
+                        <div>
+                            <span className="font-medium">{t.addons}:</span>
+                            <div className="ml-2 mt-1">
+                                {order.items
+                                    .filter(item => item.addons.length > 0)
+                                    .map((item, itemIndex) => (
+                                        <div key={itemIndex}>
+                                            {item.addons.map((addon, addonIndex) => (
+                                                <div key={addonIndex}>
+                                                    • {addon.count}x {addon.name} ({item.name})
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Excludes */}
+                    {order.items.some(item => item.excludes.length > 0) && (
+                        <div>
+                            <span className="font-medium">{t.excludes}:</span>
+                            <div className="ml-2 mt-1">
+                                {order.items
+                                    .filter(item => item.excludes.length > 0)
+                                    .map((item, itemIndex) => (
+                                        <div key={itemIndex}>
+                                            • {item.excludes.join(', ')} ({item.name})
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Extras */}
+                    {order.items.some(item => item.extras.length > 0) && (
+                        <div>
+                            <span className="font-medium">{t.extras}:</span>
+                            <div className="ml-2 mt-1">
+                                {order.items
+                                    .filter(item => item.extras.length > 0)
+                                    .map((item, itemIndex) => (
+                                        <div key={itemIndex}>
+                                            • {item.extras.join(', ')} ({item.name})
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {order.note && (
+                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-800">
+                        <p className="m-0 font-medium">{t.note}: <span className="text-blue-700">{order.note}</span></p>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex justify-between items-end mt-4 pt-3 border-t border-dashed border-gray-200">
+                <div>
+                    <p className="m-0 text-xs text-gray-500">{t.orderTime}</p>
+                    <p className="m-0 font-bold text-sm text-gray-800">{order.time}</p>
+                    <p className="m-0 text-xs text-gray-400">{order.date}</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                    <button
+                        className={`
+                            border-none py-1.5 px-3 rounded-full text-xs font-bold shadow-sm transition-colors duration-200 mb-2
+                            ${order.status === "preparing" ? 'bg-blue-100 text-blue-600' : ''}
+                            ${order.status === "done" ? 'bg-green-100 text-green-600' : ''}
+                        `}
+                    >
+                        {order.status === "preparing" ? t.preparing : t.done}
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex gap-2 mt-2">
+                <button
+                    onClick={e => { e.stopPropagation(); handleShowDetails(order.id); }}
+                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center flex-1"
+                    title={t.viewDetails}
+                >
+                    <span className="text-sm font-semibold">{t.viewDetails}</span>
+                </button>
+                <button
+                    onClick={e => { e.stopPropagation(); handleStatusChange(order.id, "done"); }}
+                    disabled={loadingChange || order.status === "done"}
+                    className={`
+                        p-2 rounded-lg transition-colors duration-200 flex items-center justify-center flex-1
+                        ${loadingChange || order.status === "done"
+                            ? 'bg-gray-400 cursor-not-allowed text-white'
+                            : 'bg-green-600 text-white hover:bg-green-700'}
+                    `}
+                    title={t.markDone}
+                >
+                    <span className="text-sm font-semibold">{t.markDone}</span>
+                </button>
+                <button
+                    onClick={e => { e.stopPropagation(); handleMarkAsRead(order.id); }}
+                    disabled={loadingMarkAsRead}
+                    className={`
+                        p-2 rounded-lg transition-colors duration-200 flex items-center justify-center flex-1
+                        ${loadingMarkAsRead ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-orange-600 text-white hover:bg-orange-700'}
+                    `}
+                    title={t.markAsRead}
+                >
+                    <span className="text-sm font-semibold">{t.markAsRead}</span>
+                </button>
+            </div>
+        </div>
+    );
+
     return (
-        <div 
+        <div
             className="min-h-screen flex justify-center items-center p-4 bg-gradient-to-br from-red-50 to-pink-100 font-sans text-gray-800"
             dir={isRTL ? "rtl" : "ltr"}
         >
             <div className="bg-white rounded-2xl w-full shadow-2xl flex flex-col overflow-hidden">
                 {/* Header Section */}
-                <div className="p-6 border-b border-gray-200 flex justify-between items-center flex-wrap gap-4 bg-white sticky top-0 z-20">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center flex-wrap gap-4 bg-white sticky top-0 z-20">
                     <div className="flex items-center gap-4">
                         <span className="text-4xl font-bold text-red-600">{projectName}</span>
                         <button
@@ -355,16 +659,16 @@ const HomePage = () => {
                                 onClick={() => setFilterType(type)}
                                 disabled={ordersLoading}
                                 className={`
-                                    py-2 px-6 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300
+                                    py-2 px-4 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300
                                     ${filterType === type
                                         ? 'bg-red-600 text-white shadow-md'
                                         : 'bg-transparent text-gray-600 hover:bg-gray-200 hover:text-red-600'}
                                     ${ordersLoading ? 'opacity-50 cursor-not-allowed' : ''}
                                 `}
                             >
-                                {type === "all" ? t.all : 
-                                 type === "take_away" ? t.takeAway :
-                                 type === "dine_in" ? t.dineIn : t.delivery}
+                                {type === "all" ? t.all :
+                                    type === "take_away" ? t.takeAway :
+                                        type === "dine_in" ? t.dineIn : t.delivery}
                             </button>
                         ))}
                     </div>
@@ -390,115 +694,63 @@ const HomePage = () => {
                     </div>
                 </div>
 
-                {/* Orders List - Full Screen */}
-                <div className="flex-grow p-4 bg-gray-50">
-                    <div className="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6 w-full overflow-y-auto max-h-[calc(100vh-200px)] scrollPage">
+                {/* Main Content Area - Split Layout */}
+                <div className="flex-grow flex flex-col md:flex-row gap-6 p-4 bg-gray-50">
+                    {/* ---------- LEFT – READ ORDERS ---------- */}
+                    <div className="flex-1 overflow-y-auto max-h-[calc(100vh-200px)] scrollPage">
+                        <h2 className="mb-4 text-lg font-semibold text-gray-700">{t.allOrders}</h2>
+
                         {ordersLoading ? (
-                            // Loading skeletons
-                            Array.from({ length: 12 }).map((_, index) => (
-                                <OrderSkeleton key={index} />
-                            ))
-                        ) : filteredOrders.length === 0 ? (
-                            <div className="col-span-full text-center py-12">
-                                <p className="text-gray-500 text-lg">{t.noOrders}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-6">
+                                {Array.from({ length: 12 }).map((_, i) => (
+                                    <OrderSkeleton key={i} />
+                                ))}
+                            </div>
+                        ) : readOrders.length === 0 ? (
+                            <p className="text-center text-gray-500">{t.noOrders}</p>
+                        ) : (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                                {readOrders.map(order => (
+                                    <OrderCard key={order.id} order={order} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+
+                    {/* ---------- RIGHT – NOTIFICATIONS (UNREAD ORDERS) ---------- */}
+                    <div className="w-full md:w-80 overflow-y-auto max-h-[calc(100vh-200px)] scrollPage">
+                        <div className="bg-white rounded-2xl p-4 shadow-lg mb-4">
+                            <h2 className="text-2xl font-bold text-red-600 flex items-center gap-2">
+                                <span>🆕</span>
+                                {t.notifications}
+                                {notifications.length > 0 && (
+                                    <span className="bg-red-600 text-white text-sm rounded-full px-3 py-1">
+                                        {notifications.length} {selectedLanguage === "ar" ? "جديد" : "new"}
+                                    </span>
+                                )}
+                            </h2>
+                        </div>
+
+                        {notificationsLoading ? (
+                            <div className="space-y-4">
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <OrderSkeleton key={i} />
+                                ))}
+                            </div>
+                        ) : notifications.length === 0 ? (
+                            <div className="text-center py-12 bg-white rounded-2xl p-6">
+                                <p className="text-gray-500 text-lg">{t.noNewOrders}</p>
+                                <p className="text-sm text-gray-400 mt-2">
+                                    {selectedLanguage === "ar" ? "لا توجد طلبات جديدة" : "No new orders available"}
+                                </p>
                             </div>
                         ) : (
-                            filteredOrders.map((order) => (
-                                <div
-                                    key={order.id}
-                                    onClick={() => handleOrderClick(order.id)}
-                                    className={`
-                                        bg-white rounded-2xl p-5 shadow-lg flex flex-col justify-between cursor-pointer
-                                        hover:shadow-xl hover:bg-gray-50 transition-all duration-300
-                                        ${!order.read ? 'border-l-2 border-red-600' : ''}
-                                    `}
-                                >
-                                    <div>
-                                        <h3 className="m-0 text-xl font-bold text-gray-800 mb-3">
-                                            {t.orderId} <span className="text-red-600">#{order.id}</span>
-                                        </h3>
-                                        <div className="flex items-center gap-3 text-gray-600 text-sm mb-3">
-                                            <span className="text-xl">{order.icon}</span>
-                                            <span className="font-medium">{order.type}</span>
-                                            {order.type === t.dineIn && order.table && (
-                                                <span className="font-medium">| {t.table} {order.table}</span>
-                                            )}
-                                        </div>
-                                        <div className="text-xs text-gray-500 mb-4">
-                                            <p>{t.items}: {order.items.map(item => `${item.quantity}x ${item.name}`).join(", ")}</p>
-                                            {order.items.some(item => item.addons.length > 0) && (
-                                                <p>{t.addons}: {order.items
-                                                    .filter(item => item.addons.length > 0)
-                                                    .map(item => item.addons.map(addon => `${addon.count}x ${addon.name}`).join(", "))
-                                                    .join("; ")}</p>
-                                            )}
-                                            {order.items.some(item => item.excludes.length > 0) && (
-                                                <p>{t.excludes}: {order.items
-                                                    .filter(item => item.excludes.length > 0)
-                                                    .map(item => item.excludes.join(", "))
-                                                    .join("; ")}</p>
-                                            )}
-                                            {order.items.some(item => item.extras.length > 0) && (
-                                                <p>{t.extras}: {order.items
-                                                    .filter(item => item.extras.length > 0)
-                                                    .map(item => item.extras.join(", "))
-                                                    .join("; ")}</p>
-                                            )}
-                                        </div>
-                                        {order.note && (
-                                            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-800">
-                                                <p className="m-0 font-medium">{t.note}: <span className="text-blue-700">{order.note}</span></p>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex justify-between items-end mt-4 pt-3 border-t border-dashed border-gray-200">
-                                        <div>
-                                            <p className="m-0 text-xs text-gray-500">{t.orderTime}</p>
-                                            <p className="m-0 font-bold text-sm text-gray-800">{order.time}</p>
-                                            <p className="m-0 text-xs text-gray-400">{order.date}</p>
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <button
-                                                className={`
-                                                    border-none py-1.5 px-3 rounded-full text-xs font-bold shadow-sm transition-colors duration-200 mb-2
-                                                    ${order.status === "preparing" ? 'bg-blue-100 text-blue-600' : ''}
-                                                    ${order.status === "done" ? 'bg-green-100 text-green-600' : ''}
-                                                `}
-                                            >
-                                                {order.status === "preparing" ? t.preparing : t.done}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2 mt-2">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleShowDetails(order.id);
-                                            }}
-                                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center flex-1"
-                                            title={t.viewDetails}
-                                        >
-                                            <span className="text-sm font-semibold">👁️ {t.viewDetails}</span>
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleStatusChange(order.id, "done");
-                                            }}
-                                            disabled={loadingChange || order.status === "done"}
-                                            className={`
-                                                p-2 rounded-lg transition-colors duration-200 flex items-center justify-center flex-1
-                                                ${loadingChange || order.status === "done"
-                                                    ? 'bg-gray-400 cursor-not-allowed text-white'
-                                                    : 'bg-green-600 text-white hover:bg-green-700'}
-                                            `}
-                                            title={t.markDone}
-                                        >
-                                            <span className="text-sm font-semibold">✅ {t.markDone}</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
+                            <div className="grid grid-cols-1 gap-4">
+                                {notifications.map(order => (
+                                    <NotificationOrderCard key={order.id} order={order} />
+                                ))}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -535,7 +787,7 @@ const HomePage = () => {
                                         <> | {t.table} <span className="font-bold">{orders[currentSlideIndex].table}</span></>
                                     )}
                                     | {t.status}: <span className="font-bold">
-                                        {orders[currentSlideIndex].read ? t.read : t.unread}
+                                        {isOrderUnread(orders[currentSlideIndex].id) ? t.unread : t.read}
                                     </span>
                                 </p>
                                 <div className="border-b border-dashed border-gray-200 pb-4 mb-4">
@@ -582,7 +834,7 @@ const HomePage = () => {
                                     >
                                         {loadingChange ? t.processing : orders[currentSlideIndex].status === "done" ? t.completed : t.markDone}
                                     </button>
-                                    {!orders[currentSlideIndex].read && (
+                                    {isOrderUnread(orders[currentSlideIndex].id) && (
                                         <button
                                             onClick={() => handleMarkAsRead(orders[currentSlideIndex].id)}
                                             disabled={loadingMarkAsRead}
@@ -607,7 +859,7 @@ const HomePage = () => {
                     </div>
                 </div>
             )}
-
+            
             {/* Notification Dialog */}
             {showNotificationDialog && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
@@ -670,6 +922,7 @@ const HomePage = () => {
                     </div>
                 </div>
             )}
+
 
             {/* Chef Profile Dialog */}
             {showChefDialog && (
