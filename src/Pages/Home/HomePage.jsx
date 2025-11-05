@@ -8,21 +8,105 @@ import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {
     const apiUrl = import.meta.env.VITE_API_BASE_URL;
-    const { refetch: refetchOrders, data: ordersData } = useGet({
-        url: `${apiUrl}/kitchen/orders`,
+    const projectNameEn = import.meta.env.VITE_PROJECT_EN_NAME || "Food2Go";
+    const projectNameAr = import.meta.env.VITE_PROJECT_AR_NAME || "فود تو جو";
+    
+    // Language state
+    const [selectedLanguage, setSelectedLanguage] = useState("en");
+    const projectName = selectedLanguage === "ar" ? projectNameAr : projectNameEn;
+    
+    // Translations
+    const translations = {
+        en: {
+            searchPlaceholder: "Search by ID, item, or table...",
+            noOrders: "No orders found for the selected filters.",
+            orderId: "Order ID",
+            items: "Items",
+            addons: "Addons",
+            excludes: "Excludes",
+            extras: "Extras",
+            note: "Note",
+            orderTime: "Order Time",
+            preparing: "Preparing",
+            done: "Done",
+            viewDetails: "View Details",
+            markDone: "Mark Done",
+            notifications: "Notifications",
+            noNewOrders: "No new orders.",
+            type: "Type",
+            table: "Table",
+            status: "Status",
+            read: "Read",
+            unread: "Unread",
+            markAsRead: "Mark as Read",
+            completed: "Completed",
+            show: "Show",
+            processing: "Processing...",
+            logout: "Logout",
+            branch: "Branch",
+            all: "All",
+            takeAway: "Take Away",
+            dineIn: "Dine In",
+            delivery: "Delivery",
+            loadingOrders: "Loading orders...",
+            loading: "Loading..."
+        },
+        ar: {
+            searchPlaceholder: "ابحث بالرقم، الصنف، أو الطاولة...",
+            noOrders: "لا توجد طلبات تطابق الفلاتر المحددة.",
+            orderId: "رقم الطلب",
+            items: "الأصناف",
+            addons: "الإضافات",
+            excludes: "المستثنيات",
+            extras: "الإضافات الإضافية",
+            note: "ملاحظة",
+            orderTime: "وقت الطلب",
+            preparing: "قيد التحضير",
+            done: "مكتمل",
+            viewDetails: "عرض التفاصيل",
+            markDone: "إتمام",
+            notifications: "الإشعارات",
+            noNewOrders: "لا توجد طلبات جديدة.",
+            type: "النوع",
+            table: "الطاولة",
+            status: "الحالة",
+            read: "مقروء",
+            unread: "غير مقروء",
+            markAsRead: "تعيين كمقروء",
+            completed: "مكتمل",
+            show: "عرض",
+            processing: "جاري المعالجة...",
+            logout: "تسجيل الخروج",
+            branch: "الفرع",
+            all: "الكل",
+            takeAway: "طلب خارجي",
+            dineIn: "تناول في المطعم",
+            delivery: "دليفري",
+            loadingOrders: "جاري تحميل الطلبات...",
+            loading: "جاري التحميل..."
+        }
+    };
+
+    const t = translations[selectedLanguage];
+
+    // Use loading state from useGet hook
+    const { refetch: refetchOrders, data: ordersData, loading: ordersLoading } = useGet({
+        url: `${apiUrl}/kitchen/orders?locale=${selectedLanguage}`,
         required: true,
     });
-    const { refetch: refetchNotifications, data: notificationsData } = useGet({
-        url: `${apiUrl}/kitchen/orders/notification`,
+    
+    const { refetch: refetchNotifications, data: notificationsData, loading: notificationsLoading } = useGet({
+        url: `${apiUrl}/kitchen/orders/notification?locale=${selectedLanguage}`,
         required: true,
     });
+    
     const { postData: logoutPost, loadingPost } = usePost({ url: `${apiUrl}/api/logout` });
     const { changeState: markAsReadPost, loadingChange: loadingMarkAsRead } = useChangeState();
     const auth = useAuth();
     const navigate = useNavigate();
     const { changeState, loadingChange } = useChangeState();
     const [orders, setOrders] = useState([]);
-    const [notifications, setNotifications] = useState([]); // New state for notifications
+    const [notifications, setNotifications] = useState([]);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [filterStatus, setFilterStatus] = useState("preparing");
     const [filterType, setFilterType] = useState("all");
@@ -41,6 +125,7 @@ const HomePage = () => {
 
     const chefData = {
         name: auth?.kitchen?.kitchen.name || "Unknown Chef",
+        phone: auth?.kitchen?.kitchen.phone || "N/A",
         branch: auth?.kitchen?.kitchen?.branch?.name || "Main Kitchen",
     };
 
@@ -48,13 +133,27 @@ const HomePage = () => {
         if (data && data.kitchen_order) {
             return data.kitchen_order.map(order => ({
                 id: order.id.toString(),
-                type: order.type === "take_away" ? "Take Away" : order.type === "dine_in" ? "Dine In" : "Delivery",
+                type: order.type === "take_away" ? t.takeAway : order.type === "dine_in" ? t.dineIn : t.delivery,
                 date: order.created_at
-                    ? new Date(order.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
-                    : new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }),
+                    ? new Date(order.created_at).toLocaleDateString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', { 
+                        day: '2-digit', 
+                        month: 'short', 
+                        year: 'numeric' 
+                    })
+                    : new Date().toLocaleDateString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', { 
+                        day: '2-digit', 
+                        month: 'short', 
+                        year: 'numeric' 
+                    }),
                 time: order.created_at
-                    ? new Date(order.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                    : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                    ? new Date(order.created_at).toLocaleTimeString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    })
+                    : new Date().toLocaleTimeString(selectedLanguage === "ar" ? 'ar-EG' : 'en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    }),
                 status: order.status || "preparing",
                 read: order.read || false,
                 icon: order.type === "take_away" ? "🚚" : order.type === "dine_in" ? "🍽️" : "📦",
@@ -91,24 +190,25 @@ const HomePage = () => {
             refetchNotifications();
         }, 30000);
         return () => clearInterval(interval);
-    }, [refetchOrders, refetchNotifications]);
+    }, [refetchOrders, refetchNotifications, selectedLanguage]);
 
     useEffect(() => {
         const transformedOrders = transformOrders(ordersData);
         const transformedNotifications = transformOrders(notificationsData);
-        setOrders(transformedOrders); // Only use ordersData for orders
-        setNotifications(transformedNotifications); // Store notifications separately
+        setOrders(transformedOrders);
+        setNotifications(transformedNotifications);
         if (transformedOrders.length > 0 && !selectedOrder) {
             setSelectedOrder(transformedOrders[0]);
             setCurrentSlideIndex(0);
         }
         setPrevOrderCount(transformedOrders.length);
-    }, [ordersData, notificationsData, selectedOrder]);
+    }, [ordersData, notificationsData, selectedOrder, selectedLanguage]);
 
     const handleOrderClick = (orderId) => {
         const order = orders.find(o => o.id === orderId);
         setSelectedOrder(order);
         setCurrentSlideIndex(orders.findIndex(o => o.id === orderId));
+        setShowOrderDialog(true);
     };
 
     const handleStatusChange = async (orderId, newStatus) => {
@@ -132,21 +232,19 @@ const HomePage = () => {
             `Order marked as read!`
         );
         if (success) {
-            // Update orders state to mark the order as read
             const updatedOrders = orders.map(order =>
                 order.id === orderId ? { ...order, read: true } : order
             );
-            // Remove the order from notifications state
             const updatedNotifications = notifications.filter(order => order.id !== orderId);
             setOrders(updatedOrders);
             setNotifications(updatedNotifications);
             setSelectedOrder(prev => prev && prev.id === orderId ? { ...prev, read: true } : prev);
-            refetchNotifications(); // Refetch to ensure backend sync
-            refetchOrders(); // Refetch orders to ensure consistency
+            refetchNotifications();
+            refetchOrders();
         }
     };
 
-    const handleShow = (orderId) => {
+    const handleShowDetails = (orderId) => {
         const order = orders.find(o => o.id === orderId);
         setSelectedOrder(order);
         setCurrentSlideIndex(orders.findIndex(o => o.id === orderId));
@@ -186,44 +284,95 @@ const HomePage = () => {
         }
     };
 
+    const toggleLanguage = () => {
+        setSelectedLanguage(prev => prev === "en" ? "ar" : "en");
+    };
+
+    const isRTL = selectedLanguage === "ar";
+
+    // Loading skeleton component
+    const OrderSkeleton = () => (
+        <div className="bg-white rounded-2xl p-5 shadow-lg flex flex-col justify-between animate-pulse">
+            <div>
+                <div className="h-6 bg-gray-300 rounded mb-3 w-3/4"></div>
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="w-6 h-6 bg-gray-300 rounded"></div>
+                    <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                </div>
+                <div className="space-y-2 mb-4">
+                    <div className="h-3 bg-gray-300 rounded w-full"></div>
+                    <div className="h-3 bg-gray-300 rounded w-2/3"></div>
+                </div>
+            </div>
+            <div className="flex justify-between items-end mt-4 pt-3 border-t border-dashed border-gray-200">
+                <div className="space-y-2">
+                    <div className="h-3 bg-gray-300 rounded w-16"></div>
+                    <div className="h-4 bg-gray-300 rounded w-12"></div>
+                </div>
+                <div className="space-y-2">
+                    <div className="h-6 bg-gray-300 rounded w-20"></div>
+                </div>
+            </div>
+            <div className="flex gap-2 mt-2">
+                <div className="h-8 bg-gray-300 rounded flex-1"></div>
+                <div className="h-8 bg-gray-300 rounded flex-1"></div>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="min-h-screen flex justify-center items-center p-6 bg-gradient-to-br from-red-50 to-pink-100 font-sans text-gray-800">
-            <div className="bg-white rounded-2xl w-full max-w-7xl shadow-2xl flex flex-col overflow-hidden">
+        <div 
+            className="min-h-screen flex justify-center items-center p-4 bg-gradient-to-br from-red-50 to-pink-100 font-sans text-gray-800"
+            dir={isRTL ? "rtl" : "ltr"}
+        >
+            <div className="bg-white rounded-2xl w-full shadow-2xl flex flex-col overflow-hidden">
                 {/* Header Section */}
                 <div className="p-6 border-b border-gray-200 flex justify-between items-center flex-wrap gap-4 bg-white sticky top-0 z-20">
-                    <div className="flex items-center">
-                        <span className="text-4xl font-bold text-red-600">Food2Go</span>
+                    <div className="flex items-center gap-4">
+                        <span className="text-4xl font-bold text-red-600">{projectName}</span>
+                        <button
+                            onClick={toggleLanguage}
+                            className="px-4 py-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors duration-200 text-sm font-semibold"
+                        >
+                            {selectedLanguage === "en" ? "العربية" : "English"}
+                        </button>
                     </div>
                     <div className="flex items-center bg-gray-100 rounded-full px-4 py-2 flex-grow max-w-md border border-gray-300 focus-within:border-red-600 transition-all duration-300">
                         <input
                             type="text"
-                            placeholder="Search by ID, item, or table..."
+                            placeholder={t.searchPlaceholder}
                             className="border-none outline-none bg-transparent flex-grow text-sm placeholder-gray-400"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            disabled={ordersLoading}
                         />
                         <span className="ml-2 text-gray-400 text-base">🔍</span>
                     </div>
                     <div className="flex gap-2 bg-gray-100 rounded-full p-1">
-                        {["all", "Take Away", "Dine In", "Delivery"].map(type => (
+                        {["all", "take_away", "dine_in", "delivery"].map(type => (
                             <button
                                 key={type}
-                                onClick={() => setFilterType(type.toLowerCase())}
+                                onClick={() => setFilterType(type)}
+                                disabled={ordersLoading}
                                 className={`
                                     py-2 px-6 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300
-                                    ${filterType === type.toLowerCase()
+                                    ${filterType === type
                                         ? 'bg-red-600 text-white shadow-md'
                                         : 'bg-transparent text-gray-600 hover:bg-gray-200 hover:text-red-600'}
+                                    ${ordersLoading ? 'opacity-50 cursor-not-allowed' : ''}
                                 `}
                             >
-                                {type}
+                                {type === "all" ? t.all : 
+                                 type === "take_away" ? t.takeAway :
+                                 type === "dine_in" ? t.dineIn : t.delivery}
                             </button>
                         ))}
                     </div>
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => setShowNotificationDialog(true)}
-                            className={`p-3 rounded-full hover:bg-gray-100 transition-colors relative ${notifications.length > 0 ? 'animate-pulse' : ''}`}
+                            disabled={notificationsLoading}
+                            className={`p-3 rounded-full hover:bg-gray-100 transition-colors relative ${notifications.length > 0 ? 'animate-pulse' : ''} ${notificationsLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <span className="text-xl text-gray-600">🔔</span>
                             {notifications.length > 0 && (
@@ -241,13 +390,17 @@ const HomePage = () => {
                     </div>
                 </div>
 
-                {/* Main Content Area */}
-                <div className="flex flex-grow p-6 gap-6 flex-wrap lg:flex-nowrap bg-gray-50">
-                    {/* Orders List */}
-                    <div className="flex-1 min-w-[300px] p-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full overflow-y-auto max-h-[calc(100vh-200px)] scrollPage">
-                        {filteredOrders.length === 0 ? (
+                {/* Orders List - Full Screen */}
+                <div className="flex-grow p-4 bg-gray-50">
+                    <div className="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6 w-full overflow-y-auto max-h-[calc(100vh-200px)] scrollPage">
+                        {ordersLoading ? (
+                            // Loading skeletons
+                            Array.from({ length: 12 }).map((_, index) => (
+                                <OrderSkeleton key={index} />
+                            ))
+                        ) : filteredOrders.length === 0 ? (
                             <div className="col-span-full text-center py-12">
-                                <p className="text-gray-500 text-lg">No orders found for the selected filters.</p>
+                                <p className="text-gray-500 text-lg">{t.noOrders}</p>
                             </div>
                         ) : (
                             filteredOrders.map((order) => (
@@ -257,147 +410,109 @@ const HomePage = () => {
                                     className={`
                                         bg-white rounded-2xl p-5 shadow-lg flex flex-col justify-between cursor-pointer
                                         hover:shadow-xl hover:bg-gray-50 transition-all duration-300
-                                        ${selectedOrder?.id === order.id ? 'ring-4 ring-red-600 ring-offset-2 z-10 border-none' : ''}
                                         ${!order.read ? 'border-l-2 border-red-600' : ''}
                                     `}
                                 >
                                     <div>
-                                        <h3 className="m-0 text-xl font-bold text-gray-800 mb-3">Order ID <span className="text-red-600">#{order.id}</span></h3>
+                                        <h3 className="m-0 text-xl font-bold text-gray-800 mb-3">
+                                            {t.orderId} <span className="text-red-600">#{order.id}</span>
+                                        </h3>
                                         <div className="flex items-center gap-3 text-gray-600 text-sm mb-3">
                                             <span className="text-xl">{order.icon}</span>
                                             <span className="font-medium">{order.type}</span>
+                                            {order.type === t.dineIn && order.table && (
+                                                <span className="font-medium">| {t.table} {order.table}</span>
+                                            )}
                                         </div>
-                                        <div className="text-xs text-gray-500">
-                                            <p>Items: {order.items.map(item => `${item.quantity}x ${item.name}`).join(", ")}</p>
+                                        <div className="text-xs text-gray-500 mb-4">
+                                            <p>{t.items}: {order.items.map(item => `${item.quantity}x ${item.name}`).join(", ")}</p>
                                             {order.items.some(item => item.addons.length > 0) && (
-                                                <p>Addons: {order.items
+                                                <p>{t.addons}: {order.items
                                                     .filter(item => item.addons.length > 0)
                                                     .map(item => item.addons.map(addon => `${addon.count}x ${addon.name}`).join(", "))
                                                     .join("; ")}</p>
                                             )}
                                             {order.items.some(item => item.excludes.length > 0) && (
-                                                <p>Excludes: {order.items
+                                                <p>{t.excludes}: {order.items
                                                     .filter(item => item.excludes.length > 0)
                                                     .map(item => item.excludes.join(", "))
                                                     .join("; ")}</p>
                                             )}
                                             {order.items.some(item => item.extras.length > 0) && (
-                                                <p>Extras: {order.items
+                                                <p>{t.extras}: {order.items
                                                     .filter(item => item.extras.length > 0)
                                                     .map(item => item.extras.join(", "))
                                                     .join("; ")}</p>
                                             )}
                                         </div>
+                                        {order.note && (
+                                            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-800">
+                                                <p className="m-0 font-medium">{t.note}: <span className="text-blue-700">{order.note}</span></p>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex justify-between items-end mt-4 pt-3 border-t border-dashed border-gray-200">
                                         <div>
-                                            <p className="m-0 text-xs text-gray-500">Order Time</p>
+                                            <p className="m-0 text-xs text-gray-500">{t.orderTime}</p>
                                             <p className="m-0 font-bold text-sm text-gray-800">{order.time}</p>
                                             <p className="m-0 text-xs text-gray-400">{order.date}</p>
                                         </div>
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                className={`
+                                                    border-none py-1.5 px-3 rounded-full text-xs font-bold shadow-sm transition-colors duration-200 mb-2
+                                                    ${order.status === "preparing" ? 'bg-blue-100 text-blue-600' : ''}
+                                                    ${order.status === "done" ? 'bg-green-100 text-green-600' : ''}
+                                                `}
+                                            >
+                                                {order.status === "preparing" ? t.preparing : t.done}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 mt-2">
                                         <button
-                                            className={`
-                                                border-none py-1.5 px-3 rounded-full text-xs font-bold shadow-sm transition-colors duration-200
-                                                ${order.status === "preparing" ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' : ''}
-                                                ${order.status === "done" ? 'bg-green-100 text-green-600 hover:bg-green-200' : ''}
-                                            `}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleShowDetails(order.id);
+                                            }}
+                                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center flex-1"
+                                            title={t.viewDetails}
                                         >
-                                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                            <span className="text-sm font-semibold">👁️ {t.viewDetails}</span>
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleStatusChange(order.id, "done");
+                                            }}
+                                            disabled={loadingChange || order.status === "done"}
+                                            className={`
+                                                p-2 rounded-lg transition-colors duration-200 flex items-center justify-center flex-1
+                                                ${loadingChange || order.status === "done"
+                                                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                                                    : 'bg-green-600 text-white hover:bg-green-700'}
+                                            `}
+                                            title={t.markDone}
+                                        >
+                                            <span className="text-sm font-semibold">✅ {t.markDone}</span>
                                         </button>
                                     </div>
                                 </div>
                             ))
                         )}
                     </div>
-
-                    {/* Order Summary */}
-                    <div className="flex-none w-full lg:w-[400px] min-w-[300px] bg-white border border-gray-200 rounded-2xl p-6 shadow-lg overflow-y-auto max-h-[calc(100vh-200px)] scrollPage">
-                        <h3 className="mb-4 text-2xl text-red-600 font-bold border-b border-gray-200 pb-3">Order Summary</h3>
-                        {selectedOrder ? (
-                            <>
-                                <p className="mb-4 text-sm text-gray-800">
-                                    Order# <span className="font-bold">{selectedOrder.id}</span> |
-                                    Type: <span className="font-bold">{selectedOrder.type}</span>
-                                    {selectedOrder.type === "Dine In" && selectedOrder.table && (
-                                        <> | Table <span className="font-bold">{selectedOrder.table}</span></>
-                                    )}
-                                    {/* | Status: <span className="font-bold">{selectedOrder.read ? "Read" : "Unread"}</span> */}
-                                </p>
-                                <div className="border-b border-dashed border-gray-200 pb-4 mb-4">
-                                    {selectedOrder.items.map((item, index) => (
-                                        <div key={index} className="mb-4">
-                                            <div className="flex justify-between items-center">
-                                                <p className="m-0 font-semibold text-sm text-gray-800">{item.quantity} x {item.name}</p>
-                                                <span className="font-bold text-sm text-gray-800">EGP {item.price.toFixed(2)}</span>
-                                            </div>
-                                            {item.variation && <p className="m-0 text-xs text-gray-500">Variation: {item.variation}</p>}
-                                            {item.addons.length > 0 && (
-                                                <p className="m-0 text-xs text-gray-500">Addons: {item.addons.map(addon => `${addon.count}x ${addon.name}`).join(", ")}</p>
-                                            )}
-                                            {item.excludes.length > 0 && (
-                                                <p className="m-0 text-xs text-gray-500">Excludes: {item.excludes.join(", ")}</p>
-                                            )}
-                                            {item.extras.length > 0 && (
-                                                <p className="m-0 text-xs text-gray-500">Extras: {item.extras.join(", ")}</p>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                {selectedOrder.note && (
-                                    <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
-                                        <p className="m-0 font-medium">Note: <span className="text-blue-700">{selectedOrder.note}</span></p>
-                                    </div>
-                                )}
-                                <div className="mb-4 text-xs text-gray-500">
-                                    <div className="flex justify-between mb-2">
-                                        <span>Items Price</span>
-                                        <span>EGP {selectedOrder.itemsPrice.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between mb-2">
-                                        <span>Addons Price</span>
-                                        <span>EGP {selectedOrder.addonsPrice.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between mb-2">
-                                        <span>Discount</span>
-                                        <span className="text-red-500">-EGP {selectedOrder.discount.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                                <div className="flex justify-between items-center border-t border-gray-200 pt-4">
-                                    <h3 className="m-0 text-lg font-bold text-gray-800">Total</h3>
-                                    <h3 className="m-0 text-2xl font-extrabold text-red-600">EGP {selectedOrder.total.toFixed(2)}</h3>
-                                </div>
-                                {selectedOrder.status === "preparing" && (
-                                    <button
-                                        onClick={() => handleStatusChange(selectedOrder.id, "done")}
-                                        disabled={loadingChange}
-                                        className={`
-                                            w-full py-3 text-white rounded-lg mt-4 text-base font-bold cursor-pointer flex items-center justify-center gap-2 shadow-md
-                                            ${loadingChange ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 transform hover:scale-105 transition-all duration-300'}
-                                        `}
-                                    >
-                                        <span className="text-lg">✅</span>
-                                        {loadingChange ? "Processing..." : "Mark as Done"}
-                                    </button>
-                                )}
-                                {selectedOrder.status === "done" && (
-                                    <button
-                                        disabled
-                                        className="w-full py-3 bg-gray-400 text-white rounded-lg mt-4 text-base font-bold cursor-not-allowed flex items-center justify-center gap-2"
-                                    >
-                                        <span className="text-lg">✔️</span>
-                                        Order Completed
-                                    </button>
-                                )}
-                            </>
-                        ) : (
-                            <div className="text-center text-gray-500 py-8">
-                                <p className="mb-2 text-lg">No orders available</p>
-                                <p className="text-sm">Waiting for new orders...</p>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
+
+            {/* Loading overlay for API calls */}
+            {(ordersLoading || notificationsLoading) && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-6 flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mb-4"></div>
+                        <p className="text-gray-700">{t.loadingOrders}</p>
+                    </div>
+                </div>
+            )}
 
             {/* Order Dialog with Swiper */}
             {showOrderDialog && orders.length > 0 && (
@@ -411,37 +526,40 @@ const HomePage = () => {
                         </button>
                         <div {...handlers}>
                             <div className="p-4">
-                                <h3 className="mb-4 text-xl text-red-600 font-bold">Order #{orders[currentSlideIndex].id}</h3>
+                                <h3 className="mb-4 text-xl text-red-600 font-bold">
+                                    {t.orderId} #{orders[currentSlideIndex].id}
+                                </h3>
                                 <p className="mb-4 text-sm text-gray-800">
-                                    Type: <span className="font-bold">{orders[currentSlideIndex].type}</span>
-                                    {orders[currentSlideIndex].type === "Dine In" && orders[currentSlideIndex].table && (
-                                        <> | Table <span className="font-bold">{orders[currentSlideIndex].table}</span></>
+                                    {t.type}: <span className="font-bold">{orders[currentSlideIndex].type}</span>
+                                    {orders[currentSlideIndex].type === t.dineIn && orders[currentSlideIndex].table && (
+                                        <> | {t.table} <span className="font-bold">{orders[currentSlideIndex].table}</span></>
                                     )}
-                                    | Status: <span className="font-bold">{orders[currentSlideIndex].read ? "Read" : "Unread"}</span>
+                                    | {t.status}: <span className="font-bold">
+                                        {orders[currentSlideIndex].read ? t.read : t.unread}
+                                    </span>
                                 </p>
                                 <div className="border-b border-dashed border-gray-200 pb-4 mb-4">
                                     {orders[currentSlideIndex].items.map((item, index) => (
                                         <div key={index} className="mb-4">
                                             <div className="flex justify-between items-center">
                                                 <p className="m-0 font-semibold text-sm text-gray-800">{item.quantity} x {item.name}</p>
-                                                <span className="font-bold text-sm text-gray-800">EGP {item.price.toFixed(2)}</span>
                                             </div>
                                             {item.variation && <p className="m-0 text-xs text-gray-500">Variation: {item.variation}</p>}
                                             {item.addons.length > 0 && (
-                                                <p className="m-0 text-xs text-gray-500">Addons: {item.addons.map(addon => `${addon.count}x ${addon.name}`).join(", ")}</p>
+                                                <p className="m-0 text-xs text-gray-500">{t.addons}: {item.addons.map(addon => `${addon.count}x ${addon.name}`).join(", ")}</p>
                                             )}
                                             {item.excludes.length > 0 && (
-                                                <p className="m-0 text-xs text-gray-500">Excludes: {item.excludes.join(", ")}</p>
+                                                <p className="m-0 text-xs text-gray-500">{t.excludes}: {item.excludes.join(", ")}</p>
                                             )}
                                             {item.extras.length > 0 && (
-                                                <p className="m-0 text-xs text-gray-500">Extras: {item.extras.join(", ")}</p>
+                                                <p className="m-0 text-xs text-gray-500">{t.extras}: {item.extras.join(", ")}</p>
                                             )}
                                         </div>
                                     ))}
                                 </div>
                                 {orders[currentSlideIndex].note && (
                                     <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
-                                        <p className="m-0 font-medium">Note: <span className="text-blue-700">{orders[currentSlideIndex].note}</span></p>
+                                        <p className="m-0 font-medium">{t.note}: <span className="text-blue-700">{orders[currentSlideIndex].note}</span></p>
                                     </div>
                                 )}
                                 <div className="flex justify-between gap-2 mt-4">
@@ -450,7 +568,7 @@ const HomePage = () => {
                                         disabled={currentSlideIndex === 0}
                                         className="p-2 bg-gray-200 text-gray-800 rounded-full disabled:opacity-50"
                                     >
-                                        ⬅️
+                                        {isRTL ? "➡️" : "⬅️"}
                                     </button>
                                     <button
                                         onClick={() => handleStatusChange(orders[currentSlideIndex].id, "done")}
@@ -462,7 +580,7 @@ const HomePage = () => {
                                                 : 'bg-red-600 text-white hover:bg-red-700'}
                                         `}
                                     >
-                                        {loadingChange ? "Processing..." : orders[currentSlideIndex].status === "done" ? "Completed" : "Mark as Done"}
+                                        {loadingChange ? t.processing : orders[currentSlideIndex].status === "done" ? t.completed : t.markDone}
                                     </button>
                                     {!orders[currentSlideIndex].read && (
                                         <button
@@ -473,7 +591,7 @@ const HomePage = () => {
                                                 ${loadingMarkAsRead ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}
                                             `}
                                         >
-                                            {loadingMarkAsRead ? "Processing..." : "Mark as Read"}
+                                            {loadingMarkAsRead ? t.processing : t.markAsRead}
                                         </button>
                                     )}
                                     <button
@@ -481,7 +599,7 @@ const HomePage = () => {
                                         disabled={currentSlideIndex === orders.length - 1}
                                         className="p-2 bg-gray-200 text-gray-800 rounded-full disabled:opacity-50"
                                     >
-                                        ➡️
+                                        {isRTL ? "⬅️" : "➡️"}
                                     </button>
                                 </div>
                             </div>
@@ -500,9 +618,14 @@ const HomePage = () => {
                         >
                             &times;
                         </button>
-                        <h3 className="mb-4 text-2xl text-red-600 font-bold">Notifications</h3>
-                        {notifications.length === 0 ? (
-                            <p className="text-gray-500 text-lg">No new orders.</p>
+                        <h3 className="mb-4 text-2xl text-red-600 font-bold">{t.notifications}</h3>
+                        {notificationsLoading ? (
+                            <div className="flex justify-center items-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                                <span className="ml-2 text-gray-600">{t.loading}</span>
+                            </div>
+                        ) : notifications.length === 0 ? (
+                            <p className="text-gray-500 text-lg">{t.noNewOrders}</p>
                         ) : (
                             notifications.map((order) => (
                                 <div
@@ -511,12 +634,12 @@ const HomePage = () => {
                                 >
                                     <div className="flex justify-between items-center gap-2">
                                         <div>
-                                            <p className="m-0 font-semibold text-sm text-gray-800">Order #{order.id}</p>
-                                            <p className="m-0 text-xs text-gray-500">{order.type} | {order.time} | {order.read ? "Read" : "Unread"}</p>
+                                            <p className="m-0 font-semibold text-sm text-gray-800">{t.orderId} #{order.id}</p>
+                                            <p className="m-0 text-xs text-gray-500">{order.type} | {order.time} | {order.read ? t.read : t.unread}</p>
                                         </div>
                                         <div className="flex gap-2">
                                             <button
-                                                onClick={() => handleShow(order.id)}
+                                                onClick={() => handleShowDetails(order.id)}
                                                 disabled={order.status === "done"}
                                                 className={`
                                                     py-1.5 px-4 rounded-lg text-xs font-semibold
@@ -525,7 +648,7 @@ const HomePage = () => {
                                                         : 'bg-red-600 text-white hover:bg-red-700'}
                                                 `}
                                             >
-                                                {order.status === "done" ? "Completed" : "Show"}
+                                                {order.status === "done" ? t.completed : t.show}
                                             </button>
                                             {!order.read && (
                                                 <button
@@ -536,7 +659,7 @@ const HomePage = () => {
                                                         ${loadingMarkAsRead ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}
                                                     `}
                                                 >
-                                                    {loadingMarkAsRead ? "Processing..." : "Mark as Read"}
+                                                    {loadingMarkAsRead ? t.processing : t.markAsRead}
                                                 </button>
                                             )}
                                         </div>
@@ -563,12 +686,12 @@ const HomePage = () => {
                                 {chefData.name.charAt(0)}
                             </div>
                             <h2 className="text-2xl font-bold text-gray-800 mb-2">{chefData.name}</h2>
-                            <p className="text-sm text-gray-500 mb-4">Branch: {chefData.branch}</p>
+                            <p className="text-sm text-gray-500 mb-4">{t.branch}: {chefData.branch}</p>
                             <button
                                 onClick={handleLogout}
                                 className="py-2 px-6 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-all duration-300"
                             >
-                                Logout
+                                {t.logout}
                             </button>
                         </div>
                     </div>

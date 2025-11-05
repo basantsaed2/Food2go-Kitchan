@@ -8,7 +8,6 @@ const LoginPage = () => {
        // API base URL (fallback for local development)
        const apiUrl = import.meta.env.VITE_API_BASE_URL;
        const auth = useAuth();
-       // const dispatch = useDispatch();
        const navigate = useNavigate();
 
        // State for form inputs and errors
@@ -49,75 +48,76 @@ const LoginPage = () => {
        }, [response]);
 
        return (
-              <div className="w-full min-h-screen flex items-center justify-center">
-                     <div className="w-full flex flex-col md:flex-row rounded-lg overflow-hidden">
+              <div className="w-full h-full md:h-screen flex items-center justify-center overflow-hidden">
+                     <div className="w-full h-full flex flex-col md:flex-row justify-center">
                             {/* Left: Form Section */}
                             <div className="w-full md:w-1/2 bg-white p-8 flex flex-col justify-center">
-                                   <h1 className="text-3xl md:text-4xl font-bold text-red-800 mb-2">Welcome Back</h1>
-                                   <p className="text-red-600 mb-6">Login to your account</p>
+                                   <div className=" w-full">
+                                          <h1 className="text-3xl md:text-4xl font-bold text-red-800 mb-2">Welcome Back</h1>
+                                          <p className="text-red-600 mb-6">Login to your account</p>
 
-                                   {loginError && (
-                                          <div
-                                                 className={`p-3 rounded-md mb-4 text-sm ${response?.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                                        }`}
-                                                 role="alert"
-                                          >
-                                                 {loginError}
-                                          </div>
-                                   )}
+                                          {loginError && (
+                                                 <div
+                                                        className={`p-3 rounded-md mb-4 text-sm ${response?.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                               }`}
+                                                        role="alert"
+                                                 >
+                                                        {loginError}
+                                                 </div>
+                                          )}
 
-                                   <form onSubmit={handleLogin} className="space-y-6">
-                                          <div>
-                                                 <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                                                        Username
-                                                 </label>
-                                                 <input
-                                                        id="name"
-                                                        type="text"
-                                                        value={name}
-                                                        onChange={(e) => setName(e.target.value)}
-                                                        placeholder="Enter your username"
-                                                        className="mt-1 w-full p-3 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                                                        aria-required="true"
+                                          <form onSubmit={handleLogin} className="space-y-6">
+                                                 <div>
+                                                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                                                               Username
+                                                        </label>
+                                                        <input
+                                                               id="name"
+                                                               type="text"
+                                                               value={name}
+                                                               onChange={(e) => setName(e.target.value)}
+                                                               placeholder="Enter your username"
+                                                               className="mt-1 w-full p-3 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                               aria-required="true"
+                                                               disabled={loadingPost}
+                                                               autoComplete='off'
+                                                        />
+                                                 </div>
+
+                                                 <div>
+                                                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                                                               Password
+                                                        </label>
+                                                        <input
+                                                               id="password"
+                                                               type="password"
+                                                               value={password}
+                                                               onChange={(e) => setPassword(e.target.value)}
+                                                               placeholder="Enter your password"
+                                                               className="mt-1 w-full p-3 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                               aria-required="true"
+                                                               disabled={loadingPost}
+                                                               autoComplete='new-password'
+                                                        />
+                                                 </div>
+
+                                                 <button
+                                                        type="submit"
                                                         disabled={loadingPost}
-                                                        autoComplete='off'
-                                                 />
-                                          </div>
-
-                                          <div>
-                                                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                                                        Password
-                                                 </label>
-                                                 <input
-                                                        id="password"
-                                                        type="password"
-                                                        value={password}
-                                                        onChange={(e) => setPassword(e.target.value)}
-                                                        placeholder="Enter your password"
-                                                        className="mt-1 w-full p-3 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                                                        aria-required="true"
-                                                        disabled={loadingPost}
-                                                        autoComplete='new-password'
-                                                 />
-                                          </div>
-
-                                          <button
-                                                 type="submit"
-                                                 disabled={loadingPost}
-                                                 className={`w-full py-3 rounded-md text-white font-semibold transition-colors ${loadingPost ? 'bg-red-400 cursor-not-allowed' : 'bg-red-800 hover:bg-red-700'
-                                                        }`}
-                                          >
-                                                 {loadingPost ? 'Logging in...' : 'Login'}
-                                          </button>
-                                   </form>
+                                                        className={`w-full py-3 rounded-md text-white font-semibold transition-colors ${loadingPost ? 'bg-red-400 cursor-not-allowed' : 'bg-red-800 hover:bg-red-700'
+                                                               }`}
+                                                 >
+                                                        {loadingPost ? 'Logging in...' : 'Login'}
+                                                 </button>
+                                          </form>
+                                   </div>
                             </div>
 
                             {/* Right: Background Image Section */}
-                            <div className="hidden md:flex md:w-1/2 items-center justify-center">
+                            <div className="hidden md:flex md:w-1/2 items-center justify-center bg-white">
                                    <LoginBackground
-                                          className="w-full h-full object-cover"
+                                          className="w-full h-full object-cover" height='100%' width='100%'
                                           aria-hidden="true"
-                                          style={{ maxHeight: '100%' }}
                                    />
                             </div>
                      </div>
