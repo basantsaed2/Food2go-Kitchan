@@ -276,7 +276,7 @@ const HomePage = () => {
 
     // Get notification order IDs for checking if an order is unread
     const notificationOrderIds = notifications.map(order => order.id);
-    
+
     // Check if an order is unread (exists in notifications)
     const isOrderUnread = (orderId) => notificationOrderIds.includes(orderId);
 
@@ -624,6 +624,35 @@ const HomePage = () => {
         </div>
     );
 
+    // Add this separator component right after the left section and before the right section
+    const SectionSeparator = () => (
+        <div className="relative flex items-center justify-center my-4 md:my-0 md:mx-4">
+            {/* Vertical line for desktop, horizontal for mobile */}
+            <div className="hidden md:block h-full w-1 bg-gradient-to-b from-red-200 via-red-400 to-pink-200 rounded-full"></div>
+
+            {/* Mobile horizontal line */}
+            <div className="md:hidden w-full h-1 bg-gradient-to-r from-red-200 via-red-400 to-pink-200 rounded-full"></div>
+
+            {/* Animated notification indicator */}
+            <div className="absolute hidden md:flex items-center justify-center w-10 h-10 bg-white border-2 border-red-500 rounded-full shadow-lg z-10">
+                <div className="relative">
+                    <span className="text-lg">🔔</span>
+                    {/* Pulsing animation */}
+                    <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20"></div>
+                </div>
+            </div>
+
+            {/* Text label - only show on mobile */}
+            <div className="absolute md:hidden bg-white px-3 py-1 rounded-full border border-red-300 shadow-sm">
+                <span className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                    <span>🆕</span>
+                    New Orders
+                    <span>🆕</span>
+                </span>
+            </div>
+        </div>
+    );
+
     return (
         <div
             className="min-h-screen flex justify-center items-center p-4 bg-gradient-to-br from-red-50 to-pink-100 font-sans text-gray-800"
@@ -716,6 +745,9 @@ const HomePage = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* ---------- CREATIVE SEPARATOR ---------- */}
+                    <SectionSeparator />
 
 
                     {/* ---------- RIGHT – NOTIFICATIONS (UNREAD ORDERS) ---------- */}
@@ -859,7 +891,7 @@ const HomePage = () => {
                     </div>
                 </div>
             )}
-            
+
             {/* Notification Dialog */}
             {showNotificationDialog && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
