@@ -13,8 +13,8 @@ const ChefDialog = ({ chefData, t, handleLogout, setShowChefDialog }) => (
                 {chefData.name.charAt(0)}
             </div>
             <h2 className="text-2xl font-bold text-gray-800">{chefData.name}</h2>
-            <p className="text-gray-500 text-sm mb-2">{chefData.branch}</p>
-            <p className="text-gray-400 text-xs mb-8">{chefData.phone}</p>
+            <p className="text-gray-900 text-sm mb-2">{chefData.branch}</p>
+            <p className="text-gray-900 text-xs mb-8">{chefData.phone}</p>
             <button
                 onClick={handleLogout}
                 className="w-full py-3 bg-[var(--first-color)] text-white rounded-xl font-bold hover:shadow-lg transition-transform active:scale-95"

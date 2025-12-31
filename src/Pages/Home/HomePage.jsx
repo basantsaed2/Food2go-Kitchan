@@ -320,7 +320,7 @@ const HomePage = () => {
                     <SectionSeparator />
 
                     {/* Right Side: Notifications */}
-                    <div className="w-full md:w-80 overflow-y-auto max-h-[calc(100vh-200px)] scrollPage">
+                    <div className="w-full md:w-64 p-2 overflow-y-auto max-h-[calc(100vh-200px)] scrollPage">
                         <div className="bg-white rounded-2xl p-4 shadow-lg mb-4 border-b-2 border-[var(--first-color)]">
                             <h2 className="text-2xl font-bold text-[var(--first-color)] flex items-center gap-2"><span>🚀</span>{t.notifications}</h2>
                         </div>

@@ -35,9 +35,9 @@ const NotificationOrderCard = ({ order, t, preparingTimeStr, handleOrderClick, h
                 </div>
 
                 <div className="flex gap-1">
-                    <button onClick={e => { e.stopPropagation(); handleShowDetails(order.id); }} className="p-2 bg-blue-600 text-white rounded flex-1 text-[10px] font-bold">{t.viewDetails}</button>
-                    <button onClick={e => { e.stopPropagation(); handleStatusChange(order.id, "done"); }} disabled={loadingChange} className="p-2 bg-green-600 text-white rounded flex-1 text-[10px] font-bold disabled:bg-gray-300">{t.markDone}</button>
-                    <button onClick={e => { e.stopPropagation(); handleMarkAsRead(order.id); }} disabled={loadingMarkAsRead} className="p-2 bg-orange-600 text-white rounded flex-1 text-[10px] font-bold disabled:bg-gray-300">{t.markAsRead}</button>
+                    <button onClick={e => { e.stopPropagation(); handleShowDetails(order.id); }} className="p-2 bg-blue-600 text-white rounded flex-1 text-xs font-bold">{t.viewDetails}</button>
+                    <button onClick={e => { e.stopPropagation(); handleStatusChange(order.id, "done"); }} disabled={loadingChange} className="p-2 bg-green-600 text-white rounded flex-1 text-xs font-bold disabled:bg-gray-300">{t.markDone}</button>
+                    <button onClick={e => { e.stopPropagation(); handleMarkAsRead(order.id); }} disabled={loadingMarkAsRead} className="p-2 bg-orange-600 text-white rounded flex-1 text-xs font-bold disabled:bg-gray-300">{t.markAsRead}</button>
                 </div>
             </div>
         )}
