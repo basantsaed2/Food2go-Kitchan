@@ -1,40 +1,47 @@
 import axios from "axios";
-import { useState } from "react";
 import { useAuth } from "../Context/Auth";
 import { useSelector } from "react-redux";
+import { useMutation } from "@tanstack/react-query";
 
 export const useChangeState = () => {
   const auth = useAuth();
   const token = useSelector(state => state?.kitchen?.data?.token || '');
-  const [loadingChange, setLoadingChange] = useState(false);
-  const [responseChange, setResponseChange] = useState(null);
 
-  const changeState = async (url, name, data) => { // Accepting a single "data" object
-    setLoadingChange(true);
-    try {
+  const mutation = useMutation({
+    mutationFn: async ({ url, name, data }) => {
       const config = {
         headers: {
           'Authorization': `Bearer ${token || ''}`,
         },
       };
-
-      // Send the "data" object directly as the request body
-
       const response = await axios.put(url, data || {}, config);
-
+      return { response, name };
+    },
+    onSuccess: ({ response, name }) => {
       if (response.status === 200) {
-        setResponseChange(response);
         auth.toastSuccess(name);
-        return true; // Return true on success
       }
-    } catch (error) {
+    },
+    onError: (error) => {
       auth.toastError(error.message);
       console.error('Error changing state:', error);
-      return false; // Return false on error
-    } finally {
-      setLoadingChange(false);
+    }
+  });
+
+  const changeState = async (url, name, data) => {
+    try {
+      await mutation.mutateAsync({ url, name, data });
+      return true;
+    } catch (error) {
+      return false;
     }
   };
 
-  return { changeState, loadingChange, responseChange };
+  return {
+    changeState,
+    loadingChange: mutation.isPending,
+    responseChange: mutation.data?.response,
+    isSuccess: mutation.isSuccess
+  };
 };
+

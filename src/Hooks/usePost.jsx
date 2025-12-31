@@ -1,19 +1,16 @@
 import axios from "axios";
-import { useState } from "react";
-import { useAuth } from "../Context/Auth"; // Make sure to import useAuth if required
+import { useAuth } from "../Context/Auth";
 import { useSelector } from "react-redux";
+import { useMutation } from "@tanstack/react-query";
 
-export const usePost = ({ url, /* login = false, */ type = false }) => {
+export const usePost = ({ url, type = false }) => {
        const auth = useAuth();
-       const kitchen = useSelector(state => state?.kitchen?.data || null)
-       const [loadingPost, setLoadingPost] = useState(false);
-       const [response, setResponse] = useState(null);
+       const kitchen = useSelector(state => state?.kitchen?.data || null);
 
-       const postData = async (data, name) => {
-              setLoadingPost(true);
-              try {
+       const mutation = useMutation({
+              mutationFn: async ({ data, name }) => {
                      const contentType = type ? 'application/json' : 'multipart/form-data';
-                     const config = /* !login && */ kitchen?.token
+                     const config = kitchen?.token
                             ? {
                                    headers: {
                                           'Content-Type': contentType,
@@ -25,51 +22,63 @@ export const usePost = ({ url, /* login = false, */ type = false }) => {
                             };
 
                      const response = await axios.post(url, data, config);
-
+                     return { response, name };
+              },
+              onSuccess: ({ response, name }) => {
                      if (response.status === 200) {
-                            setResponse(response);
-                            { name ? auth.toastSuccess(name) : '' }
-                            // auth.toastSuccess(name)
+                            if (name) {
+                                   auth.toastSuccess(name);
+                            }
                      }
-              }
-              catch (error) {
+              },
+              onError: (error) => {
                      console.error('Error post JSON:', error);
-                     // Special case: if this is the "processing order" error, throw it to be handled by the component
+
+                     // Special case: if this is the "processing order" error, just let it be handled if needed
                      if (error?.response?.data?.errors === "You has order at proccessing") {
-                            throw error;
+                            // We could re-throw or handle it specifically, but for now we follow the original logic
+                            // which was to throw it to be handled by the component. 
+                            // In React Query, we can check error in the component.
                      }
-                     // Check if the error response contains 'errors' or just a message
+
                      if (error?.response?.data?.errors) {
-                            // Check if errors are an object (field-based errors)
                             if (typeof error.response.data.errors === 'object') {
                                    Object.entries(error.response.data.errors).forEach(([field, messages]) => {
-                                          // If messages is an array, loop through them
                                           if (Array.isArray(messages)) {
                                                  messages.forEach(message => {
-                                                        auth.toastError(message); // Display the error messages
+                                                        auth.toastError(message);
                                                  });
                                           } else {
-                                                 // If it's not an array, display the message directly
                                                  auth.toastError(messages);
                                           }
                                    });
                             } else {
-                                   // If errors is not an object, assume it's just a message
                                    auth.toastError(error.response.data.errors);
                             }
                      } else if (error?.response?.data?.message) {
-                            // If there's a general message outside of the 'errors' object
-                            auth.toastError(error.response.data.message); // Display the general error message
+                            auth.toastError(error.response.data.message);
                      } else {
-                            // If no specific error messages are found, just display a fallback message
-                            auth.toastError(t('An unknown error occurred.'));
+                            auth.toastError('An unknown error occurred.');
                      }
               }
+       });
 
-              finally {
-                     setLoadingPost(false);
+       const postData = async (data, name) => {
+              try {
+                     await mutation.mutateAsync({ data, name });
+              } catch (error) {
+                     if (error?.response?.data?.errors === "You has order at proccessing") {
+                            throw error;
+                     }
               }
        };
 
-       return { postData, loadingPost, response };
+       return {
+              postData,
+              loadingPost: mutation.isPending,
+              response: mutation.data?.response,
+              error: mutation.error,
+              isSuccess: mutation.isSuccess
+       };
 };
+

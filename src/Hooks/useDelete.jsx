@@ -1,38 +1,46 @@
 import axios from "axios";
-import { useState } from "react";
 import { useSelector } from "react-redux";
 import { useAuth } from "../Context/Auth";
+import { useMutation } from "@tanstack/react-query";
 
 export const useDelete = () => {
   const auth = useAuth();
   const token = useSelector(state => state?.kitchen?.data?.token || '');
-  const [loadingDelete, setLoadingDelete] = useState(false);
-  const [responseDelete, setResponseDelete] = useState(null);
 
-  const deleteData = async (url, name) => {
-    setLoadingDelete(true);
-    try {
+  const mutation = useMutation({
+    mutationFn: async ({ url, name }) => {
       const config = {
         headers: {
           'Authorization': `Bearer ${token || ''}`,
         },
       };
-
       const response = await axios.delete(url, config);
-
+      return { response, name };
+    },
+    onSuccess: ({ response, name }) => {
       if (response.status === 200) {
-        setResponseDelete(response)
         auth.toastSuccess(name);
-        return true; // Return true on success
       }
-    } catch (error) {
+    },
+    onError: (error) => {
       auth.toastError(error.message);
       console.error('Error Delete:', error);
-      return false; // Return false on error
-    } finally {
-      setLoadingDelete(false);
+    }
+  });
+
+  const deleteData = async (url, name) => {
+    try {
+      await mutation.mutateAsync({ url, name });
+      return true;
+    } catch (error) {
+      return false;
     }
   };
 
-  return { deleteData, loadingDelete, responseDelete };
+  return {
+    deleteData,
+    loadingDelete: mutation.isPending,
+    responseDelete: mutation.data?.response,
+    isSuccess: mutation.isSuccess
+  };
 };

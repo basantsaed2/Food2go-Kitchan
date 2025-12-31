@@ -6,11 +6,17 @@ import { router } from './Router.jsx'
 import { Provider } from 'react-redux'
 import { StoreApp } from './Store/Store.jsx'
 import './app.css'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')).render(
-    <Provider store={StoreApp}>
+  <Provider store={StoreApp}>
+    <QueryClientProvider client={queryClient}>
       <ContextProvider>
         <RouterProvider router={router} />
       </ContextProvider>
-    </Provider>
+    </QueryClientProvider>
+  </Provider>
 )
+

@@ -1,28 +1,78 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-
-const resources = {
+const translations = {
   en: {
-    translation: {
-    },
+    searchPlaceholder: "Search by ID, item, or table...",
+    noOrders: "No orders found for the selected filters.",
+    newOrders: "New Orders",
+    allOrders: "All Orders",
+    orderId: "Order ID",
+    items: "Items",
+    addons: "Addons",
+    excludes: "Excludes",
+    extras: "Extras",
+    note: "Note",
+    orderTime: "Order Time",
+    preparing: "Preparing",
+    done: "Done",
+    viewDetails: "View Details",
+    markDone: "Mark Done",
+    notifications: "Notifications",
+    noNewOrders: "No new orders.",
+    type: "Type",
+    table: "Table",
+    status: "Status",
+    read: "Read",
+    unread: "Unread",
+    markAsRead: "Mark as Read",
+    completed: "Completed",
+    show: "Show",
+    processing: "Processing...",
+    logout: "Logout",
+    branch: "Branch",
+    all: "All",
+    takeAway: "Take Away",
+    dineIn: "Dine In",
+    delivery: "Delivery",
+    loadingOrders: "Loading orders...",
+    loading: "Loading...",
+    orders: "Orders"
   },
-
   ar: {
-    translation: {
-     
-    },
-  },
+    searchPlaceholder: "ابحث بالرقم، الصنف، أو الطاولة...",
+    noOrders: "لا توجد طلبات تطابق الفلاتر المحددة.",
+    newOrders: "الطلبات الجديدة",
+    allOrders: "جميع الطلبات",
+    orderId: "رقم الطلب",
+    items: "الأصناف",
+    addons: "الإضافات",
+    excludes: "المستثنيات",
+    extras: "الإضافات الإضافية",
+    note: "ملاحظة",
+    orderTime: "وقت الطلب",
+    preparing: "قيد التحضير",
+    done: "مكتمل",
+    viewDetails: "عرض التفاصيل",
+    markDone: "إتمام",
+    notifications: "الإشعارات",
+    noNewOrders: "لا توجد طلبات جديدة.",
+    type: "النوع",
+    table: "الطاولة",
+    status: "الحالة",
+    read: "مقروء",
+    unread: "غير مقروء",
+    markAsRead: "تعيين كمقروء",
+    completed: "مكتمل",
+    show: "عرض",
+    processing: "جاري المعالجة...",
+    logout: "تسجيل الخروج",
+    branch: "الفرع",
+    all: "الكل",
+    takeAway: "تيك أواي",
+    dineIn: "صالة",
+    delivery: "توصيل",
+    loadingOrders: "جاري تحميل الطلبات...",
+    loading: "جاري التحميل...",
+    orders: "الطلبات"
+  }
 };
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources,
-    lng: 'en', // default language
-    keySeparator: false,
-    interpolation: {
-      escapeValue: false,
-    },
-  });
-
-export default i18n;
+export default translations;
