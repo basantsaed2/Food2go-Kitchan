@@ -1,6 +1,24 @@
+:root {
+  --first-color: #9e090f;
+  --second-color: #6B6A6A;
+  --third-color: #d7030b1A;
+}
+
+@keyframes flash {
+  0% { background-color: white; }
+  50% { background-color: #ffcccc; transform: scale(1.02); }
+  100% { background-color: white; }
+}
+
+.animate-flash {
+  animation: flash 1s infinite;
+  border: 2px solid #9e090f !important;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 
 @font-face {
   font-family: "Light";
